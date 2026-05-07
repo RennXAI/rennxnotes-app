@@ -1,0 +1,92 @@
+# care-notes Beta Onboarding Checklist
+
+## Beta Guardrails
+
+- Product: care-notes.com beta only
+- Slack home: #rennxai-carenotes
+- Revenue separation: keep care-notes beta activity separate from CRM revenue and lead tracking
+- Beta target: 3-5 families live and paying
+- Beta pricing: $15-20/month per participating family
+- First named beta families: Carol, Wick, then new families as added
+
+## Onboarding Tracker
+
+| Step | Checklist item | Owner | Status | Notes |
+| --- | --- | --- | --- | --- |
+| 1 | Confirm family name and primary caregiver contact | Ireine | Not started | Capture the person who should receive SMS notes and who approves payment. |
+| 2 | Confirm care recipient display name | Ireine | Not started | Use the family-approved name for generated notes. |
+| 3 | Confirm daily care note purpose | Ireine | Not started | Examples: peace-of-mind summary, agency update, family check-in, evening recap. |
+| 4 | Confirm SMS delivery phone number | Ireine | Not started | Validate number format before first delivery. |
+| 5 | Confirm preferred delivery window | Ireine | Not started | Suggested beta default: late afternoon or early evening. |
+| 6 | Collect note style preferences | Ireine | Not started | Tone, length, sensitive topics to avoid, family language preferences. |
+| 7 | Collect source input method | Ireine | Not started | Identify whether notes come from caregiver text, form entry, agency input, or manual beta entry. |
+| 8 | Create beta family record | Ireine | Not started | Keep this inside care-notes tracking, separate from CRM pipeline. |
+| 9 | Run first test care note | Ireine | Not started | Review for tone, clarity, missing context, and family trust. |
+| 10 | Send first SMS test | Ireine | Not started | Confirm delivery and screenshot or log the result in #rennxai-carenotes. |
+| 11 | Capture family feedback | Ireine | Not started | Ask whether the note feels useful, warm, and accurate enough for daily use. |
+| 12 | Confirm payment plan | Ireine | Not started | $15-20/month beta confirmation before counting family as live and paying. |
+| 13 | Log payment confirmation | Ireine | Not started | Post payment in #rennxai-carenotes and mirror revenue confirmation in the revenue tracker. |
+| 14 | Start daily generation cadence | Ireine | Not started | Post daily generation confirmation in #rennxai-carenotes. |
+| 15 | Monitor SMS delivery issues | Ireine | Ongoing | Log errors, missed sends, wrong number issues, and retries. |
+| 16 | Review first-week outcome | Ireine | Not started | Decide whether to continue, adjust note format, or pause the family. |
+
+## Family Intake Fields
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| Family label | Yes | Example: Carol family or Wick family. |
+| Primary contact name | Yes | Person approving setup and payment. |
+| Primary contact phone | Yes | SMS delivery number. |
+| Care recipient name | Yes | Use approved display name. |
+| Delivery window | Yes | Daily time range for SMS note. |
+| Care note purpose | Yes | What the family wants the note to accomplish. |
+| Source input method | Yes | Manual, form, caregiver SMS, agency update, or other. |
+| Tone preference | Recommended | Warm, concise, faith-friendly, neutral, detailed, etc. |
+| Topics to avoid | Recommended | Medical details, financial details, family conflict, etc. |
+| Beta price | Yes | $15-20/month. |
+| Payment status | Yes | Pending, confirmed, paused, canceled. |
+| First test sent | Yes | Date and result. |
+
+## Daily Channel Posting Rhythm
+
+- Post one onboarding update whenever a beta family moves to a new setup step.
+- Post one confirmation when a daily care note is generated.
+- Post immediately when SMS delivery fails or needs a retry.
+- Post concise family feedback after each first-week check-in.
+- Post beta payment confirmation only after payment is actually received.
+
+## First #rennxai-carenotes Channel Update
+
+*care-notes beta kickoff update*
+
+We are moving care-notes.com into beta setup. This stays separate from CRM activity and revenue tracking; this channel is only for care-notes family onboarding, daily note confirmations, SMS issues, family feedback, and beta payment updates.
+
+Current beta target:
+- Get 3-5 families live and paying
+- Start with Carol and Wick, then add the next families
+- Validate daily care note usefulness before bundling this into the larger CRM offer
+- Confirm beta pricing at $15-20/month per family
+
+First onboarding pass:
+- Confirm primary family contact and SMS number
+- Confirm care recipient display name
+- Confirm daily note purpose and preferred delivery window
+- Run first test note
+- Send first SMS test
+- Capture family feedback
+- Confirm payment before counting the family as live
+
+Today I am treating the beta as live setup, not theory. The first goal is simple: get the first family through test note, SMS confirmation, feedback, and payment status.
+
+## First Family Update Template
+
+*care-notes beta family update: [Family name]*
+
+- Stage: [intake / test note / SMS test / feedback / payment confirmed / live daily cadence]
+- Primary contact: [name]
+- SMS delivery: [pending / test sent / confirmed / issue]
+- Daily note purpose: [short purpose]
+- Delivery window: [time window]
+- Payment: [pending / confirmed at $15-20/month]
+- Feedback: [what the family said or what needs adjustment]
+- Next step: [one concrete action]
