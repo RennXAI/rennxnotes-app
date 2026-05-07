@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing RBAC role",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "standard", "pending"] },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["email", "role", "createdAt", "updatedAt"]
+    },
+    "GlobalSettings": {
+      "title": "Global Settings",
+      "description": "App-wide settings",
+      "type": "object",
+      "properties": {
+        "twilioToNumber": { "type": "string" },
+        "notificationTime": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["updatedAt"]
+    },
+    "Resident": {
+      "title": "Resident",
+      "description": "A person receiving care",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "Medication": {
+      "title": "Medication",
+      "description": "A prescribed medication",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "instructions": { "type": "string" },
+        "period": { "type": "string", "enum": ["morning", "afternoon", "evening"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "period", "createdAt"]
+    },
+    "ChecklistItem": {
+      "title": "Checklist Item Definition",
+      "description": "A task to be done daily",
+      "type": "object",
+      "properties": {
+        "task": { "type": "string" },
+        "period": { "type": "string", "enum": ["morning", "afternoon", "evening"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["task", "period", "createdAt"]
+    },
+    "DailyLog": {
+      "title": "Daily Log",
+      "description": "The daily overview for a resident",
+      "type": "object",
+      "properties": {
+        "notes": { "type": "string" },
+        "reportText": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["updatedAt"]
+    },
+    "VitalReading": {
+      "title": "Vital Reading",
+      "type": "object",
+      "properties": {
+        "systolic": { "type": "number" },
+        "diastolic": { "type": "number" },
+        "pulse": { "type": "number" },
+        "period": { "type": "string", "enum": ["morning", "afternoon"] },
+        "timestamp": { "type": "number" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["systolic", "diastolic", "pulse", "timestamp", "authorId"]
+    },
+    "MealLog": {
+      "title": "Meal Log",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"] },
+        "food": { "type": "string" },
+        "drinks": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["type", "food", "drinks", "timestamp", "authorId"]
+    },
+    "MedicationLog": {
+      "title": "Medication Administration Log",
+      "type": "object",
+      "properties": {
+        "medicationId": { "type": "string" },
+        "medicationName": { "type": "string" },
+        "notes": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["medicationId", "medicationName", "timestamp", "authorId"]
+    },
+    "ChecklistLog": {
+      "title": "Checklist Task Completion Log",
+      "type": "object",
+      "properties": {
+        "checklistId": { "type": "string" },
+        "task": { "type": "string" },
+        "notes": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["checklistId", "task", "timestamp", "authorId"]
+    },
+    "EventLog": {
+      "title": "Event Log",
+      "description": "BM or Diaper change or Manual entry",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["bm", "diaper", "manual"] },
+        "notes": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["type", "timestamp", "authorId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/GlobalSettings" },
+      "description": "Global Settings"
+    },
+    "/residents/{residentId}": {
+      "schema": { "$ref": "#/entities/Resident" },
+      "description": "A resident"
+    },
+    "/residents/{residentId}/medications/{medicationId}": {
+      "schema": { "$ref": "#/entities/Medication" },
+      "description": "Prescribed medication list"
+    },
+    "/residents/{residentId}/checklists/{checklistId}": {
+      "schema": { "$ref": "#/entities/ChecklistItem" },
+      "description": "Tasks configured for this resident"
+    },
+    "/residents/{residentId}/dailyLogs/{dateString}": {
+      "schema": { "$ref": "#/entities/DailyLog" },
+      "description": "The top-level daily log"
+    },
+    "/residents/{residentId}/dailyLogs/{dateString}/vitals/{vitalId}": {
+      "schema": { "$ref": "#/entities/VitalReading" },
+      "description": "Vitals taken on a day"
+    },
+    "/residents/{residentId}/dailyLogs/{dateString}/meals/{mealId}": {
+      "schema": { "$ref": "#/entities/MealLog" },
+      "description": "Meals given on a day"
+    },
+    "/residents/{residentId}/dailyLogs/{dateString}/medications/{medLogId}": {
+      "schema": { "$ref": "#/entities/MedicationLog" },
+      "description": "Medications taken on a day"
+    },
+    "/residents/{residentId}/dailyLogs/{dateString}/checklistLogs/{logId}": {
+      "schema": { "$ref": "#/entities/ChecklistLog" },
+      "description": "Tasks completed on a day"
+    },
+    "/residents/{residentId}/dailyLogs/{dateString}/events/{eventId}": {
+      "schema": { "$ref": "#/entities/EventLog" },
+      "description": "Other events on a day"
+    }
+  }
+}

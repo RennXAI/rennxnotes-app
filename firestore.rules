@@ -1,0 +1,262 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { 
+        return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    
+    // For Bootstrapping, if user's email matches rennsignature@gmail.com, evaluate as Admin
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'rennsignature@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isStandardOrAdmin() {
+      return isVerified() && (
+         request.auth.token.email == 'rennsignature@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'standard'])
+      );
+    }
+
+    // --- Entity Validation Helpers ---
+
+    function isValidUser(data) {
+        return data.keys().hasAll(['email', 'role', 'createdAt', 'updatedAt']) 
+            && data.keys().size() == 4
+            && data.email is string && data.email.size() > 0 && data.email.size() <= 200
+            && data.role is string && data.role in ['admin', 'standard', 'pending']
+            && data.createdAt is number
+            && data.updatedAt is number;
+    }
+
+    function isValidSettings(data) {
+        return data.keys().hasAll(['twilioToNumber', 'notificationTime', 'updatedAt']) 
+            && data.keys().size() == 3
+            && data.twilioToNumber is string && data.twilioToNumber.size() <= 20
+            && data.notificationTime is string && data.notificationTime.size() <= 10
+            && data.updatedAt is number;
+    }
+
+    function isValidResident(data) {
+        return data.keys().hasAll(['name', 'createdAt']) && data.keys().size() == 2
+            && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+            && data.createdAt is number;
+    }
+
+    function isValidMedication(data) {
+        return data.keys().hasAll(['name', 'instructions', 'period', 'createdAt']) && data.keys().size() == 4
+            && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+            && data.instructions is string && data.instructions.size() <= 500
+            && data.period is string && data.period in ['morning', 'afternoon', 'evening']
+            && data.createdAt is number;
+    }
+
+    function isValidChecklistItem(data) {
+        return data.keys().hasAll(['task', 'period', 'createdAt']) && data.keys().size() == 3
+            && data.task is string && data.task.size() > 0 && data.task.size() <= 200
+            && data.period is string && data.period in ['morning', 'afternoon', 'evening']
+            && data.createdAt is number;
+    }
+
+    function isValidDailyLog(data) {
+        return data.keys().hasAll(['notes', 'reportText', 'updatedAt']) && data.keys().size() == 3
+            && data.notes is string && data.notes.size() <= 5000
+            && data.reportText is string && data.reportText.size() <= 10000
+            && data.updatedAt is number;
+    }
+
+    function isValidVitalReading(data) {
+        return data.keys().hasAll(['systolic', 'diastolic', 'pulse', 'period', 'timestamp', 'authorId']) && data.keys().size() == 6
+            && data.systolic is number 
+            && data.diastolic is number
+            && data.pulse is number
+            && data.period is string && data.period in ['morning', 'afternoon']
+            && data.timestamp is number
+            && data.authorId is string && data.authorId == request.auth.uid;
+    }
+
+    function isValidMealLog(data) {
+        return data.keys().hasAll(['type', 'food', 'drinks', 'timestamp', 'authorId']) && data.keys().size() == 5
+            && data.type is string && data.type in ['breakfast', 'lunch', 'dinner', 'snack']
+            && data.food is string && data.food.size() <= 1000
+            && data.drinks is string && data.drinks.size() <= 1000
+            && data.timestamp is number
+            && data.authorId is string && data.authorId == request.auth.uid;
+    }
+
+    function isValidMedicationLog(data) {
+        return data.keys().hasAll(['medicationId', 'medicationName', 'notes', 'timestamp', 'authorId']) && data.keys().size() == 5
+            && data.medicationId is string && data.medicationId.size() <= 128
+            && data.medicationName is string && data.medicationName.size() <= 100
+            && data.notes is string && data.notes.size() <= 1000
+            && data.timestamp is number
+            && data.authorId is string && data.authorId == request.auth.uid;
+    }
+
+    function isValidChecklistLog(data) {
+        return data.keys().hasAll(['checklistId', 'task', 'notes', 'timestamp', 'authorId']) && data.keys().size() == 5
+            && data.checklistId is string && data.checklistId.size() <= 128
+            && data.task is string && data.task.size() <= 200
+            && data.notes is string && data.notes.size() <= 1000
+            && data.timestamp is number
+            && data.authorId is string && data.authorId == request.auth.uid;
+    }
+
+    function isValidEventLog(data) {
+        return data.keys().hasAll(['type', 'notes', 'timestamp', 'authorId']) && data.keys().size() == 4
+            && data.type is string && data.type in ['bm', 'diaper', 'manual']
+            && data.notes is string && data.notes.size() <= 1000
+            && data.timestamp is number
+            && data.authorId is string && data.authorId == request.auth.uid;
+    }
+
+
+    // --- Collections ---
+
+    match /users/{userId} {
+        allow get: if isVerified() && isValidId(userId);
+        allow list: if isVerified() && isAdmin(); // Only admins can list users
+        
+        allow create: if isVerified() && request.auth.uid == userId && isValidId(userId)
+                      && isValidUser(incoming())
+                      && incoming().email == request.auth.token.email
+                      && (incoming().role == 'pending' || (request.auth.token.email == 'rennsignature@gmail.com' && incoming().role == 'admin'));
+                      
+        allow update: if isVerified() && isValidId(userId) && isAdmin()
+                      && isValidUser(incoming())
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'updatedAt'])
+                      && incoming().role in ['admin', 'standard', 'pending']
+                      && incoming().email == existing().email
+                      && incoming().createdAt == existing().createdAt;
+    }
+
+    match /settings/{settingId} {
+        allow get: if isStandardOrAdmin() && isValidId(settingId);
+        allow create: if isAdmin() && isValidSettings(incoming()) && isValidId(settingId);
+        allow update: if isAdmin() && isValidSettings(incoming()) && isValidId(settingId)
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['twilioToNumber', 'notificationTime', 'updatedAt']);
+    }
+
+    match /residents/{residentId} {
+        allow get: if isStandardOrAdmin() && isValidId(residentId);
+        allow list: if isStandardOrAdmin();
+        allow create: if isAdmin() && isValidResident(incoming()) && isValidId(residentId);
+        allow update: if isAdmin() && isValidResident(incoming()) && isValidId(residentId)
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['name'])
+                      && incoming().createdAt == existing().createdAt;
+    }
+
+    match /residents/{residentId}/medications/{medId} {
+        allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(medId);
+        allow list: if isStandardOrAdmin() && isValidId(residentId);
+        allow create: if isAdmin() && isValidId(residentId) && isValidId(medId) && isValidMedication(incoming());
+        allow update: if isAdmin() && isValidId(residentId) && isValidId(medId) && isValidMedication(incoming())
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'instructions', 'period'])
+                      && incoming().createdAt == existing().createdAt;
+        allow delete: if isAdmin() && isValidId(residentId) && isValidId(medId);
+    }
+
+    match /residents/{residentId}/checklists/{checklistId} {
+         allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(checklistId);
+         allow list: if isStandardOrAdmin() && isValidId(residentId);
+         allow create: if isAdmin() && isValidId(residentId) && isValidId(checklistId) && isValidChecklistItem(incoming());
+         allow update: if isAdmin() && isValidId(residentId) && isValidId(checklistId) && isValidChecklistItem(incoming())
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['task', 'period'])
+                       && incoming().createdAt == existing().createdAt;
+         allow delete: if isAdmin() && isValidId(residentId) && isValidId(checklistId);
+    }
+
+    match /residents/{residentId}/dailyLogs/{dateString} {
+         allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString);
+         allow list: if isStandardOrAdmin() && isValidId(residentId);
+         allow create: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidDailyLog(incoming());
+         allow update: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidDailyLog(incoming())
+                       && incoming().diff(existing()).affectedKeys().hasAny(['notes', 'reportText', 'updatedAt']);
+    }
+
+    match /residents/{residentId}/dailyLogs/{dateString}/vitals/{vitalId} {
+         allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(vitalId);
+         allow list: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString);
+         allow create: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(vitalId)
+                       && isValidVitalReading(incoming());
+         allow update: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(vitalId)
+                       && isValidVitalReading(incoming())
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['systolic', 'diastolic', 'pulse', 'period', 'timestamp'])
+                       && existing().authorId == request.auth.uid
+                       && incoming().authorId == existing().authorId;
+         allow delete: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(vitalId)
+                       && existing().authorId == request.auth.uid;
+    }
+
+    match /residents/{residentId}/dailyLogs/{dateString}/meals/{mealId} {
+         allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(mealId);
+         allow list: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString);
+         allow create: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(mealId)
+                       && isValidMealLog(incoming());
+         allow update: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(mealId)
+                       && isValidMealLog(incoming())
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['type', 'food', 'drinks', 'timestamp'])
+                       && existing().authorId == request.auth.uid
+                       && incoming().authorId == existing().authorId;
+         allow delete: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(mealId)
+                       && existing().authorId == request.auth.uid;
+    }
+
+    match /residents/{residentId}/dailyLogs/{dateString}/medications/{medLogId} {
+         allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(medLogId);
+         allow list: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString);
+         allow create: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(medLogId)
+                       && isValidMedicationLog(incoming());
+         allow update: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(medLogId)
+                       && isValidMedicationLog(incoming())
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['medicationId', 'medicationName', 'notes', 'timestamp'])
+                       && existing().authorId == request.auth.uid
+                       && incoming().authorId == existing().authorId;
+         allow delete: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(medLogId)
+                       && existing().authorId == request.auth.uid;
+    }
+
+    match /residents/{residentId}/dailyLogs/{dateString}/checklistLogs/{logId} {
+         allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(logId);
+         allow list: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString);
+         allow create: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(logId)
+                       && isValidChecklistLog(incoming());
+         allow update: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(logId)
+                       && isValidChecklistLog(incoming())
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['checklistId', 'task', 'notes', 'timestamp'])
+                       && existing().authorId == request.auth.uid
+                       && incoming().authorId == existing().authorId;
+         allow delete: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(logId)
+                       && existing().authorId == request.auth.uid;
+    }
+
+    match /residents/{residentId}/dailyLogs/{dateString}/events/{eventId} {
+         allow get: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(eventId);
+         allow list: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString);
+         allow create: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(eventId)
+                       && isValidEventLog(incoming());
+         allow update: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(eventId)
+                       && isValidEventLog(incoming())
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['type', 'notes', 'timestamp'])
+                       && existing().authorId == request.auth.uid
+                       && incoming().authorId == existing().authorId;
+         allow delete: if isStandardOrAdmin() && isValidId(residentId) && isValidId(dateString) && isValidId(eventId)
+                       && existing().authorId == request.auth.uid;
+    }
+  }
+}
